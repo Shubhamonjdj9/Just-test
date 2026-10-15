@@ -1,0 +1,25 @@
+{
+  "name": "atelier-full-stack-store",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n API,STORE -c green,cyan \"node --watch server/src/server.js\" \"vite --config client/vite.config.js\"",
+    "server": "node server/src/server.js",
+    "client": "vite --config client/vite.config.js",
+    "seed": "node server/src/seed.js",
+    "create:admin": "node server/src/create-admin.js",
+    "test": "node --test",
+    "build": "vite --config client/vite.config.js build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "vite": "^6.4.1"
+  }
+}
