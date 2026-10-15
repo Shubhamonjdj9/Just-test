@@ -7,11 +7,13 @@ export const api = axios.create({
 });
 
 export function apiError(error) {
-  return error.response?.data?.error?.message
-    ?? error.response?.data?.error
-    ?? error.response?.data?.message
-    ?? error.message
-    ?? "We couldn't complete that request. Please try again.";
+  return (
+    error.response?.data?.error?.message ??
+    error.response?.data?.error ??
+    error.response?.data?.message ??
+    error.message ??
+    "We couldn't complete that request. Please try again."
+  );
 }
 
 export async function fetchProducts(params = {}, signal) {
