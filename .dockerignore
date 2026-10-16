@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+**/.env
+**/.env.*
+node_modules
+**/node_modules
+client/dist
+server/uploads
+coverage
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*

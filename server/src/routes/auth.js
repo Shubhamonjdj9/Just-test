@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import { config } from "../config/env.js";
 import { Product, User } from "../models/index.js";
-import { authenticate, sessionCookie } from "../middleware/auth.js";
+import { authenticate, SESSION_DURATION_SECONDS, sessionCookie } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { registerSchema, loginSchema, addressSchema, resetPasswordSchema } from "../validators/schemas.js";
 import { AppError, asyncHandler } from "../utils/errors.js";
@@ -13,7 +13,7 @@ const router = Router();
 const cookieName = "atelier_session";
 
 function setSession(response, user) {
-  const token = jwt.sign({ sub: user.id }, config.jwtSecret, { expiresIn: "7d" });
+  const token = jwt.sign({ sub: user.id }, config.jwtSecret, { expiresIn: SESSION_DURATION_SECONDS });
   response.cookie(cookieName, token, sessionCookie);
 }
 

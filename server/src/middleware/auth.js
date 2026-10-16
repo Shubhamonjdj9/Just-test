@@ -3,12 +3,14 @@ import { config } from "../config/env.js";
 import { User } from "../models/index.js";
 import { AppError, asyncHandler } from "../utils/errors.js";
 
+export const SESSION_DURATION_SECONDS = 2 * 24 * 60 * 60;
+
 export const sessionCookie = {
   httpOnly: true,
-  secure: config.nodeEnv === "production",
-  sameSite: config.nodeEnv === "production" ? "none" : "lax",
+  secure: config.cookieSecure,
+  sameSite: config.cookieSecure ? "none" : "lax",
   path: "/",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  maxAge: SESSION_DURATION_SECONDS * 1000,
 };
 
 export const authenticate = asyncHandler(async (request, _response, next) => {
