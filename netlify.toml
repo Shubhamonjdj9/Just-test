@@ -1,6 +1,22 @@
 [build]
-command = "npm --workspace @atelier/storefront run build"
+command = "npm run build --workspace client"
 publish = "client/dist"
+functions = "netlify/functions"
+
+[build.environment]
+NODE_VERSION = "22"
+
+[functions]
+node_bundler = "esbuild"
+
+[functions."release-expired-reservations"]
+schedule = "* * * * *"
+
+[[redirects]]
+from = "/api/v1/*"
+to = "/.netlify/functions/api/api/v1/:splat"
+status = 200
+force = true
 
 [[redirects]]
 from = "/*"

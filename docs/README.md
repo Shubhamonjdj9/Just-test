@@ -28,7 +28,7 @@ Use the same `node 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' run
 | `NODE_ENV` | No | Use `development` locally; production requires a strong `JWT_SECRET`. |
 | `PORT` | No | API port (default `4000`). |
 | `CLIENT_URL` | No | Exact browser origin permitted by API CORS (default `http://localhost:5173`). |
-| `MONGODB_URI` | Yes | MongoDB connection string. |
+| `MONGODB_URI` | Yes | Local MongoDB URI for development or a remotely reachable MongoDB URI (normally Atlas) for Docker/Netlify. |
 | `JWT_SECRET` | Recommended locally; required in production | Signs the HttpOnly authentication cookie. Login sessions expire after 2 days. When omitted in development, a temporary random key is generated on each API start. |
 | `COOKIE_SECURE` | Optional | `true` sets Secure/SameSite=None session cookies; unset defaults to `true` in production and `false` in development. Docker's local HTTP setup defaults to `false`; set it to `true` behind HTTPS. |
 | `MONGO_ROOT_USERNAME` | Docker Compose only | MongoDB root user created on the first initialization of its persistent volume. |
@@ -129,6 +129,36 @@ docker compose config
 ```
 
 The backend tests run with Node's built-in test runner. `npm run build` creates the production client in `client/dist`. `docker compose config` validates the resolved Compose configuration (after required secrets are set). For the API alone, use `npm run server`; for the storefront alone, use `npm run client`.
+
+## Deploy the full app to Netlify
+
+The root [`netlify.toml`](../netlify.toml) builds the client, publishes `client/dist`, deploys the Express API as a Netlify Function, rewrites `/api/v1/*` to that function, and keeps the existing client-side routes working. The scheduled function also releases expired unpaid-order inventory once per minute on published production deploys.
+
+### Choose and configure MongoDB
+
+This application uses Mongoose and MongoDB models. Netlify Database is PostgreSQL, and Netlify Blobs is a key-value store; neither can be used as the existing MongoDB database without rewriting the persistence layer. Use MongoDB Atlas, or another MongoDB server with secure public connectivity.
+
+For Atlas, create a database and a dedicated database user with access only to this app's database. In Atlas Network Access, allow connections from Netlify Functions. Netlify's normal function egress does not provide a single fixed IP to allow-list on standard plans, so Atlas may require `0.0.0.0/0`; protect this with a strong database-user password, least-privilege access, and an encoded `mongodb+srv://` connection URI. Never commit this URI or paste it into chat. A MongoDB service running only on your computer or bound to `localhost` is not reachable from Netlify.
+
+### Connect and deploy
+
+1. Push this project to a Git provider and import the repository into Netlify. Set the Netlify base directory to the repository root (the default); `netlify.toml` contains the build, publish, function, and redirect settings.
+2. In Netlify site environment variables, set these **runtime** values for the Functions scope:
+   - `NODE_ENV=production`
+   - `JWT_SECRET` to a new random secret of at least 32 characters (do not reuse a development or Docker secret)
+   - `MONGODB_URI` to the Atlas connection URI for the app's database
+   - `CLIENT_URL` to the exact deployed site origin, for example `https://your-site-name.netlify.app` (no trailing slash). Use your custom-domain origin instead if that is the URL customers will use.
+   - `COOKIE_SECURE=true`
+3. Add any optional Razorpay **test-mode**, SMTP, and Cloudinary variables listed above to Netlify runtime environment variables if you need those integrations. Do not set `ADMIN_EMAIL` or `ADMIN_PASSWORD` as persistent deploy variables.
+4. Trigger a deploy and check `https://your-site-name.netlify.app/api/v1/health`; it should return `{"data":{"status":"ok"}}`. The storefront and API then share the Netlify origin, so browser API calls stay same-origin.
+5. To add sample products, run the idempotent seed script once using the **same Atlas URI** in a trusted local environment: set `MONGODB_URI` locally to the Atlas database URI and run `npm run seed`. Review the URI and target database first; seed inserts the four sample categories and eight products only when their slugs are absent.
+6. To create an administrator, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` only in a trusted local environment with that same Atlas URI, run `npm run create:admin`, then remove both variables. Netlify deploys cannot see your workstation's `.env`; never add admin setup credentials as site variables.
+
+Deploy Previews use a different origin from the production URL. Since browser mutation protection requires an exact `CLIENT_URL` match, account-changing requests and sign-in will be blocked in previews unless the server configuration is intentionally extended to allow the preview origin. Verify the production site URL and `CLIENT_URL` match exactly before testing sign-in.
+
+Netlify Functions are not a general-purpose always-on Node server. The existing API is adapted for request/response Functions and caches its MongoDB connection per warm function instance. The payment reservation cleanup runs through a scheduled Function; schedules run on published deploys, not automatically on Deploy Previews. Configure Atlas network access and Netlify runtime variables before testing catalog, login, checkout, or admin routes.
+
+Netlify's internal function rewrite has a 26-second proxy timeout. Keep MongoDB reachable and requests bounded; long-running reports or bulk operations should not be put on synchronous API routes.
 
 ## Payments and external services
 
