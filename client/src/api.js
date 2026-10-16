@@ -1,17 +1,19 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "/api/v1",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
   withCredentials: true,
   timeout: 12000,
 });
 
 export function apiError(error) {
-  return error.response?.data?.error?.message
-    ?? error.response?.data?.error
-    ?? error.response?.data?.message
-    ?? error.message
-    ?? "We couldn't complete that request. Please try again.";
+  return (
+    error.response?.data?.error?.message ??
+    error.response?.data?.error ??
+    error.response?.data?.message ??
+    error.message ??
+    "We couldn't complete that request. Please try again."
+  );
 }
 
 export async function fetchProducts(params = {}, signal) {
